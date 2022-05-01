@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
-# CPU temperature logger
-# Reports temp to InfluxDB server
-# Linux version
+# Uses the `sensors` linux utility to get the current CPU temperature
+# and reports it to an InfluxDB server
+# initially based on:
 # https://mansfield-devine.com/speculatrix/2021/08/network-monitoring-2-logging-cpu-temps-with-influxdb-and-grafana/
 # https://pypi.org/project/influxdb-client/#connect-to-influxdb-cloud
 
@@ -116,7 +116,7 @@ def report_cpu_temps() -> float:
             log(f"failed to write sensor data to influxdb: {str(ex)}")
             return (last_report_time - start).total_seconds()
         if log_success:
-            log(f"submitted {server_name} temp: {result} °C")
+            log(f"submitted '{server_name}' CPU temp: {result} celsius")
 
 
 try:
