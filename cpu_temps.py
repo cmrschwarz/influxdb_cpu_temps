@@ -134,12 +134,15 @@ try:
     log(f"{app_name} started")
     # try forever, increase backoff time exponentially in case of failure
     backoff_skip = 2.0
+    max_backoff_skip = back_off_max_interval / max(interval, 0.1)
     while True:
         runtime = report_cpu_temps()
         if runtime > backoff_skip * interval:
             backoff_skip = 2.0
-        else:
-            backoff_skip = backoff_skip ** random.uniform(1, 2)
+        elif backoff_skip < max_backoff_skip:
+            max_backoff_skip = backoff_skip ** random.uniform(1, 2)
+            if backoff_skip > max_backoff_skip:
+                backoff_skip = max_backoff_skip
         bt = backoff_skip * interval
         log(f"backoff time: {bt:.3f} seconds")
         time.sleep(bt)
