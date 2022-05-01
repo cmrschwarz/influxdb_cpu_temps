@@ -50,8 +50,9 @@ try:
     influx_org = config["influx_org"]
     influx_token = config["influx_token"]
     influx_bucket = config["influx_bucket"]
-    influx_temp_field = config["influx_temp_field"]
-    influx_server_name_field = config["influx_server_name_field"]
+    influx_measurement = config["influx_measurement"]
+    influx_field = config["influx_field"]
+    influx_server_name_tag = config["influx_server_name_tag"]
     log_success = bool(config["log_success"])
 
     interval = float(config["interval"])
@@ -59,10 +60,13 @@ try:
     temp_access_path = config["temp_access_path"]
 except ValueError as ex:
     log(f"failed to parse config entry: '{str(ex)}'")
+    exit(1)
 except KeyError as ex:
     log(f"missing config entry: '{str(ex)}'")
+    exit(1)
 except OSError as ex:
     log(f"failed to open config at {log_file_path}: {str(ex)}")
+    exit(1)
 except Exception as ex:
     if log_file is not None:
         log(f"{app_name} crashed: {str(ex)}")
@@ -100,7 +104,10 @@ def report_cpu_temps() -> float:
             log(f"failed to read sensor data: {str(ex)}")
             return (last_report_time - start).total_seconds()
 
-        p = Point("cpu_temp").tag("server", server_name).field("temp", result)
+        p = Point(influx_measurement).field(influx_field, result)
+        if influx_server_name_tag is not None:
+            p = p.tag(influx_server_name_tag, server_name)
+
         # wait for the current interval to elapse
         if last_report_time != start:
             sleep_time = (
@@ -116,7 +123,11 @@ def report_cpu_temps() -> float:
             log(f"failed to write sensor data to influxdb: {str(ex)}")
             return (last_report_time - start).total_seconds()
         if log_success:
-            log(f"submitted '{server_name}' CPU temp: {result} celsius")
+            server_name_ref = (
+                "" if influx_server_name_tag is None
+                else f"'{server_name}' "
+            )
+            log(f"submitted {server_name_ref}CPU temp: {result} celsius")
 
 
 try:

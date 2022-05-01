@@ -4,14 +4,20 @@
     "influx_org": "<your influx org here>",
     "influx_token": "<your influx access token here>",
     "influx_bucket": "cpu_temps",
-    "influx_temp_field": "temps",
-    "influx_server_name_field": "server", // null means don't send this
+
+    "influx_measurement": "cpu_temp",
+    "influx_field": "temp",
+    "influx_server_name_tag": "server", // null means don't add this tag
+
     "server_name": null, // null means use the hostname
+
     "log_file": "/var/log/cpu_temps.log", // null means stderr
+
     "interval": 10, // in seconds
     // in seconds. if the influxdb is down, we slow down our reconnection attempts
     // up to this interval using exponential backoff
     "back_off_max_interval": 1800,
+
     // put the access path to YOUR cpu temperature here, as given by the
     // output of the `sensors -j` command. the values here are just an example
     // and will most likely not work for you !
@@ -20,5 +26,6 @@
         "Tctl",
         "temp1_input"
     ],
+
     "log_success": false // log successfully reported temps
 }
