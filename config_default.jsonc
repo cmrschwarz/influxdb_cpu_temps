@@ -20,5 +20,5 @@
         "Tctl",
         "temp1_input"
     ],
-    "debug_print": false // print successfully reported temps on stdout
+    "log_success": false // log successfully reported temps
 }

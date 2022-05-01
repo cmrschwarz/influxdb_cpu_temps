@@ -21,11 +21,13 @@ from influxdb_client.client.write_api import SYNCHRONOUS
 
 log_file = None
 
+
 def time_str():
-    return datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S ")
+    return datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
 
 def log(message):
-    message = time_str() + message + "\n"
+    message = time_str() + " " + message + "\n"
     if log_file is None:
         sys.stderr.write(message)
     else:
@@ -49,7 +51,7 @@ try:
     influx_bucket = config["influx_bucket"]
     influx_temp_field = config["influx_temp_field"]
     influx_server_name_field = config["influx_server_name_field"]
-    debug_print = bool(config["debug_print"])
+    log_success = bool(config["log_success"])
 
     interval = float(config["interval"])
     back_off_max_interval = float(config["back_off_max_interval"])
@@ -60,6 +62,7 @@ except KeyError as ex:
     log(f"missing config entry: '{str(ex)}'")
 except OSError as ex:
     log(f"failed to open config at {log_file_path}: {str(ex)}")
+
 
 # returns the time in seconds for which it successfully ran
 def report_cpu_temps() -> float:
@@ -107,11 +110,11 @@ def report_cpu_temps() -> float:
         except (InfluxDBError, HTTPError) as ex:
             log(f"failed to write sensor data to influxdb: {str(ex)}")
             return (last_report_time - start).total_seconds()
-        if debug_print:
-            print(f"{time_str()}: {server_name} temp: {result} °C")
+        if log_success:
+            log(f"submitted {server_name} temp: {result} °C")
 
 
-# run
+# try forever, increase backoff time exponentially in case of failure
 backoff_skip = 2.0
 while True:
     runtime = report_cpu_temps()
