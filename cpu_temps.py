@@ -62,6 +62,10 @@ except KeyError as ex:
     log(f"missing config entry: '{str(ex)}'")
 except OSError as ex:
     log(f"failed to open config at {log_file_path}: {str(ex)}")
+except Exception as ex:
+    if log_file is not None:
+        log(f"cpu_temps crashed: {str(ex)}")
+    raise ex
 
 
 # returns the time in seconds for which it successfully ran
@@ -114,14 +118,19 @@ def report_cpu_temps() -> float:
             log(f"submitted {server_name} temp: {result} °C")
 
 
-# try forever, increase backoff time exponentially in case of failure
-backoff_skip = 2.0
-while True:
-    runtime = report_cpu_temps()
-    if runtime > backoff_skip * interval:
-        backoff_skip = 2.0
-    else:
-        backoff_skip = backoff_skip ** random.uniform(1, 2)
-    bt = backoff_skip * interval
-    log(f"backoff time: {bt:.3f} seconds")
-    time.sleep(bt)
+try:
+    # try forever, increase backoff time exponentially in case of failure
+    backoff_skip = 2.0
+    while True:
+        runtime = report_cpu_temps()
+        if runtime > backoff_skip * interval:
+            backoff_skip = 2.0
+        else:
+            backoff_skip = backoff_skip ** random.uniform(1, 2)
+        bt = backoff_skip * interval
+        log(f"backoff time: {bt:.3f} seconds")
+        time.sleep(bt)
+except Exception as ex:
+    if log_file is not None:
+        log(f"cpu_temps crashed: {str(ex)}")
+    raise ex
