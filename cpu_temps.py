@@ -19,6 +19,7 @@ from influxdb_client import InfluxDBClient, Point
 from influxdb_client.client.exceptions import InfluxDBError
 from influxdb_client.client.write_api import SYNCHRONOUS
 
+app_name = "cpu_temps"  # used for logging
 log_file = None
 
 
@@ -64,7 +65,7 @@ except OSError as ex:
     log(f"failed to open config at {log_file_path}: {str(ex)}")
 except Exception as ex:
     if log_file is not None:
-        log(f"cpu_temps crashed: {str(ex)}")
+        log(f"{app_name} crashed: {str(ex)}")
     raise ex
 
 
@@ -119,6 +120,7 @@ def report_cpu_temps() -> float:
 
 
 try:
+    log(f"{app_name} started")
     # try forever, increase backoff time exponentially in case of failure
     backoff_skip = 2.0
     while True:
@@ -132,5 +134,5 @@ try:
         time.sleep(bt)
 except Exception as ex:
     if log_file is not None:
-        log(f"cpu_temps crashed: {str(ex)}")
+        log(f"{app_name} crashed: {str(ex)}")
     raise ex
