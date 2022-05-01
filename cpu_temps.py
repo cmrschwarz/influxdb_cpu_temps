@@ -8,23 +8,28 @@
 
 import os
 import sys
+from urllib3.exceptions import HTTPError
 import random
 import datetime
 from socket import gethostname
 import subprocess
 import json5
 import time
-from influxdb_client import InfluxDBClient, Point, InfluxDBError
+from influxdb_client import InfluxDBClient, Point
+from influxdb_client.client.exceptions import InfluxDBError
 from influxdb_client.client.write_api import SYNCHRONOUS
 
 log_file = None
 
+def time_str():
+    return datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S ")
+
 def log(message):
-    message += "\n"
+    message = time_str() + message + "\n"
     if log_file is None:
         sys.stderr.write(message)
     else:
-        with open(log_file) as log:
+        with open(log_file, "a+") as log:
             log.write(message)
 
 
@@ -69,7 +74,7 @@ def report_cpu_temps() -> float:
             bucket=influx_bucket
         )
         write_api = influx_client.write_api(write_options=SYNCHRONOUS)
-    except InfluxDBError as ex:
+    except (InfluxDBError, HTTPError) as ex:
         log(f"influxdb connection failed: {str(ex)}")
         return (last_report_time - start).total_seconds()
 
@@ -86,38 +91,34 @@ def report_cpu_temps() -> float:
         except (OSError, KeyError, ValueError) as ex:
             log(f"failed to read sensor data: {str(ex)}")
             return (last_report_time - start).total_seconds()
-        if debug_print:
-            print(
-                f"{datetime.datetime.now()}: {server_name} temp: "
-                + f"{result} °C"
+
+        p = Point("cpu_temp").tag("server", server_name).field("temp", result)
+        # wait for the current interval to elapse
+        if last_report_time != start:
+            sleep_time = (
+                interval -
+                (datetime.datetime.now() - last_report_time).total_seconds()
             )
+            time.sleep(max(0, sleep_time))
+        last_report_time = datetime.datetime.now()
         try:
             # write to influx db
-            p = Point("cpu_temp").tag(
-                "server", server_name
-            ).field("temp", result)
             write_api.write(bucket=influx_bucket, record=p)
-        except (InfluxDBError) as ex:
+        except (InfluxDBError, HTTPError) as ex:
             log(f"failed to write sensor data to influxdb: {str(ex)}")
             return (last_report_time - start).total_seconds()
-        # wait
-        prev_report_time = last_report_time
-        last_report_time = datetime.datetime.now()
-        time.sleep(max(
-            0,
-            interval - (last_report_time - prev_report_time).total_seconds()
-        ))
+        if debug_print:
+            print(f"{time_str()}: {server_name} temp: {result} °C")
 
 
 # run
-backoff_interval = interval
+backoff_skip = 2.0
 while True:
     runtime = report_cpu_temps()
-    if runtime > backoff_interval:
-        backoff_interval = interval
+    if runtime > backoff_skip * interval:
+        backoff_skip = 2.0
     else:
-        backoff_interval = min(
-            back_off_max_interval,
-            backoff_interval * random.uniform(1, 2) * backoff_interval
-        )
-    time.sleep(backoff_interval)
+        backoff_skip = backoff_skip ** random.uniform(1, 2)
+    bt = backoff_skip * interval
+    log(f"backoff time: {bt:.3f} seconds")
+    time.sleep(bt)

@@ -1,8 +1,9 @@
+//copy this file to config.jsonc and insert your settings there
 {
-    "influx_url": "http://localhost:8086", 
+    "influx_url": "http://localhost:8086",
     "influx_org": "<your influx org here>",
     "influx_token": "<your influx access token here>",
-    "influx_bucket": "cpu_temps", 
+    "influx_bucket": "cpu_temps",
     "influx_temp_field": "temps",
     "influx_server_name_field": "server", // null means don't send this
     "server_name": null, // null means use the hostname
@@ -10,7 +11,14 @@
     "interval": 10, // in seconds
     // in seconds. if the influxdb is down, we slow down our reconnection attempts
     // up to this interval using exponential backoff
-    "back_off_max_interval": 3600, 
-    "temp_access_path": ["<access path>", "<in your $(sensors -j) output>", "<to the cpu temp>"],
-    "debug_print": false // print successfully aquired temps on stdout  
+    "back_off_max_interval": 1800,
+    // put the access path to YOUR cpu temperature here, as given by the
+    // output of the `sensors -j` command. the values here are just an example
+    // and will most likely not work for you !
+    "temp_access_path": [
+        "k10temp-pci-00c3",
+        "Tctl",
+        "temp1_input"
+    ],
+    "debug_print": false // print successfully reported temps on stdout
 }
